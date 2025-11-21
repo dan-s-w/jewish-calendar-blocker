@@ -9,6 +9,10 @@ const ShabbatCalendarBlocker = () => {
   
   // Form state
   const [zipCode, setZipCode] = useState('02067');
+  const [latitude, setLatitude] = useState('42.1237');
+  const [longitude, setLongitude] = useState('-71.1787');
+  const [locationName, setLocationName] = useState('Sharon, MA');
+  const [lookingUpZip, setLookingUpZip] = useState(false);
   const [startYear, setStartYear] = useState(new Date().getFullYear());
   const [endYear, setEndYear] = useState(new Date().getFullYear() + 3);
   const [minutesBefore, setMinutesBefore] = useState(15);
@@ -617,16 +621,338 @@ const ShabbatCalendarBlocker = () => {
     ]
   };
 
-  // Get location from ZIP code (hardcoded common locations)
+  // Lookup ZIP code using free API
+  const lookupZipCode = async (zip) => {
+    if (!zip || zip.length !== 5) return;
+    
+    setLookingUpZip(true);
+    try {
+      // Use HTTPS for Zippopotam API
+      const response = await fetch(`https://api.zippopotam.us/us/${zip}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.places && data.places.length > 0) {
+          const place = data.places[0];
+          const lat = parseFloat(place.latitude);
+          const lng = parseFloat(place.longitude);
+          
+          setLatitude(lat.toString());
+          setLongitude(lng.toString());
+          setLocationName(`${place['place name']}, ${place['state abbreviation']}`);
+        } else {
+          setLocationName(`ZIP ${zip} (not found - please enter coordinates manually)`);
+        }
+      } else {
+        setLocationName(`ZIP ${zip} (not found - please enter coordinates manually)`);
+      }
+    } catch (err) {
+      console.error('ZIP lookup error:', err);
+      setLocationName(`ZIP ${zip} (lookup failed - please enter coordinates manually)`);
+    } finally {
+      setLookingUpZip(false);
+    }
+  };
+
+  // Get location from ZIP code (comprehensive Orthodox Jewish communities)
   const getLocationFromZip = (zip) => {
     const locations = {
+      // Massachusetts
+      '02135': { lat: 42.3517, lng: -71.1516, name: 'Brighton, MA' },
+      '02446': { lat: 42.3376, lng: -71.2439, name: 'Brookline, MA' },
+      '02445': { lat: 42.3318, lng: -71.1256, name: 'Brookline, MA' },
+      '02467': { lat: 42.3251, lng: -71.1828, name: 'Chestnut Hill, MA' },
+      '02139': { lat: 42.3736, lng: -71.1097, name: 'Cambridge, MA' },
       '02067': { lat: 42.1237, lng: -71.1787, name: 'Sharon, MA' },
-      '10001': { lat: 40.7506, lng: -73.9971, name: 'New York, NY' },
+      '01760': { lat: 42.2918, lng: -71.3495, name: 'Natick, MA' },
+      '02482': { lat: 42.2834, lng: -71.2495, name: 'Wellesley, MA' },
+      '02090': { lat: 42.2876, lng: -71.2495, name: 'Westwood, MA' },
+      '02062': { lat: 42.1751, lng: -71.2495, name: 'Norwood, MA' },
+      
+      // New York - Brooklyn
+      '11211': { lat: 40.7081, lng: -73.9571, name: 'Williamsburg, Brooklyn, NY' },
+      '11249': { lat: 40.7134, lng: -73.9571, name: 'Williamsburg, Brooklyn, NY' },
+      '11206': { lat: 40.7018, lng: -73.9429, name: 'South Williamsburg, Brooklyn, NY' },
+      '11219': { lat: 40.6320, lng: -73.9963, name: 'Borough Park, Brooklyn, NY' },
+      '11204': { lat: 40.6185, lng: -73.9846, name: 'Bensonhurst, Brooklyn, NY' },
+      '11230': { lat: 40.6226, lng: -73.9652, name: 'Midwood, Brooklyn, NY' },
+      '11229': { lat: 40.5992, lng: -73.9442, name: 'Midwood, Brooklyn, NY' },
+      '11210': { lat: 40.6285, lng: -73.9474, name: 'Flatbush, Brooklyn, NY' },
+      '11223': { lat: 40.5975, lng: -73.9732, name: 'Gravesend, Brooklyn, NY' },
+      '11218': { lat: 40.6406, lng: -73.9763, name: 'Kensington, Brooklyn, NY' },
+      '11235': { lat: 40.5842, lng: -73.9496, name: 'Brighton Beach, Brooklyn, NY' },
+      '11234': { lat: 40.6064, lng: -73.9183, name: 'Marine Park, Brooklyn, NY' },
+      '11226': { lat: 40.6464, lng: -73.9565, name: 'Flatbush, Brooklyn, NY' },
+      '11203': { lat: 40.6495, lng: -73.9342, name: 'East Flatbush, Brooklyn, NY' },
+      
+      // New York - Queens
+      '11367': { lat: 40.7295, lng: -73.8243, name: 'Kew Gardens, Queens, NY' },
+      '11375': { lat: 40.7214, lng: -73.8448, name: 'Forest Hills, Queens, NY' },
+      '11374': { lat: 40.7256, lng: -73.8612, name: 'Rego Park, Queens, NY' },
+      '11435': { lat: 40.7009, lng: -73.8090, name: 'Briarwood, Queens, NY' },
+      '11432': { lat: 40.7148, lng: -73.7949, name: 'Jamaica Estates, Queens, NY' },
+      '11366': { lat: 40.7284, lng: -73.7949, name: 'Fresh Meadows, Queens, NY' },
+      
+      // New York - Manhattan
+      '10002': { lat: 40.7155, lng: -73.9900, name: 'Lower East Side, Manhattan, NY' },
+      '10003': { lat: 40.7314, lng: -73.9891, name: 'East Village, Manhattan, NY' },
+      '10011': { lat: 40.7406, lng: -74.0006, name: 'Chelsea, Manhattan, NY' },
+      '10023': { lat: 40.7754, lng: -73.9822, name: 'Upper West Side, Manhattan, NY' },
+      '10024': { lat: 40.7921, lng: -73.9747, name: 'Upper West Side, Manhattan, NY' },
+      '10025': { lat: 40.7977, lng: -73.9668, name: 'Upper West Side, Manhattan, NY' },
+      '10128': { lat: 40.7817, lng: -73.9502, name: 'Upper East Side, Manhattan, NY' },
+      '10022': { lat: 40.7583, lng: -73.9687, name: 'Midtown East, Manhattan, NY' },
+      '10028': { lat: 40.7762, lng: -73.9531, name: 'Upper East Side, Manhattan, NY' },
+      '10021': { lat: 40.7689, lng: -73.9596, name: 'Upper East Side, Manhattan, NY' },
+      
+      // New York - Five Towns (Nassau County)
+      '11096': { lat: 40.6284, lng: -73.7296, name: 'Inwood, NY' },
+      '11559': { lat: 40.6234, lng: -73.7093, name: 'Lawrence, NY' },
+      '11581': { lat: 40.6001, lng: -73.7296, name: 'Valley Stream, NY' },
+      '11598': { lat: 40.6376, lng: -73.7118, name: 'Woodmere, NY' },
+      '11557': { lat: 40.6326, lng: -73.7268, name: 'Hewlett, NY' },
+      '11580': { lat: 40.6198, lng: -73.7032, name: 'Valley Stream, NY' },
+      '11691': { lat: 40.5965, lng: -73.7551, name: 'Far Rockaway, NY' },
+      '11692': { lat: 40.5926, lng: -73.7918, name: 'Arverne, NY' },
+      '11693': { lat: 40.5926, lng: -73.8107, name: 'Far Rockaway, NY' },
+      
+      // New York - Westchester County
+      '10583': { lat: 40.9509, lng: -73.7993, name: 'Scarsdale, NY' },
+      '10804': { lat: 40.9176, lng: -73.8243, name: 'New Rochelle, NY' },
+      '10952': { lat: 41.1476, lng: -74.0376, name: 'Monsey, NY' },
+      '10977': { lat: 41.1134, lng: -74.0793, name: 'Spring Valley, NY' },
+      '10950': { lat: 41.1451, lng: -74.0965, name: 'Monroe, NY' },
+      '10901': { lat: 41.1426, lng: -73.9876, name: 'Suffern, NY' },
+      '10994': { lat: 41.3276, lng: -74.0543, name: 'Kiryas Joel, NY' },
+      
+      // New York - Long Island
+      '11030': { lat: 40.7862, lng: -73.6743, name: 'Manhasset, NY' },
+      '11542': { lat: 40.6512, lng: -73.6418, name: 'Glen Cove, NY' },
+      '11590': { lat: 40.6876, lng: -73.7293, name: 'Westbury, NY' },
+      '11530': { lat: 40.6376, lng: -73.7126, name: 'Garden City, NY' },
+      '11710': { lat: 40.7176, lng: -73.4543, name: 'Bellmore, NY' },
+      '11510': { lat: 40.6626, lng: -73.6443, name: 'Baldwin, NY' },
+      '11563': { lat: 40.6709, lng: -73.6418, name: 'Lynbrook, NY' },
+      '11732': { lat: 40.8284, lng: -73.0493, name: 'East Norwich, NY' },
+      '11771': { lat: 40.7570, lng: -73.3626, name: 'Oyster Bay, NY' },
+      '11797': { lat: 40.7893, lng: -73.1593, name: 'Woodbury, NY' },
+      
+      // New Jersey
+      '07055': { lat: 40.8576, lng: -74.2282, name: 'Passaic, NJ' },
+      '07002': { lat: 40.8401, lng: -74.2343, name: 'Bayonne, NJ' },
+      '07644': { lat: 40.9501, lng: -73.9876, name: 'Lodi, NJ' },
+      '07410': { lat: 40.9876, lng: -74.1426, name: 'Fair Lawn, NJ' },
+      '07024': { lat: 40.8443, lng: -74.0293, name: 'Fort Lee, NJ' },
+      '07020': { lat: 40.8276, lng: -74.0393, name: 'Edgewater, NJ' },
+      '07650': { lat: 40.8909, lng: -74.0376, name: 'Palisades Park, NJ' },
+      '07666': { lat: 40.8998, lng: -74.0354, name: 'Teaneck, NJ' },
+      '07670': { lat: 40.8876, lng: -74.0732, name: 'Tenafly, NJ' },
+      '07661': { lat: 40.8826, lng: -74.0626, name: 'Bergenfield, NJ' },
+      '07626': { lat: 40.9084, lng: -74.0793, name: 'Cresskill, NJ' },
+      '07640': { lat: 40.9276, lng: -74.0465, name: 'Harrington Park, NJ' },
+      '07675': { lat: 40.9309, lng: -74.0293, name: 'Westwood, NJ' },
+      '07401': { lat: 40.8151, lng: -74.1376, name: 'Allendale, NJ' },
+      '08817': { lat: 40.5012, lng: -74.4293, name: 'Edison, NJ' },
+      '08820': { lat: 40.4976, lng: -74.4493, name: 'Edison, NJ' },
+      '08837': { lat: 40.4551, lng: -74.3893, name: 'Edison, NJ' },
+      '08902': { lat: 40.4751, lng: -74.4493, name: 'North Brunswick, NJ' },
+      '08901': { lat: 40.4862, lng: -74.4418, name: 'New Brunswick, NJ' },
+      '07728': { lat: 40.2901, lng: -74.0376, name: 'Freehold, NJ' },
+      '08701': { lat: 40.0834, lng: -74.2376, name: 'Lakewood, NJ' },
+      '08759': { lat: 40.0976, lng: -74.2093, name: 'Lakewood, NJ' },
+      '08527': { lat: 40.1376, lng: -74.2676, name: 'Jackson, NJ' },
+      '07728': { lat: 40.2976, lng: -74.0543, name: 'Freehold, NJ' },
+      '08857': { lat: 40.5451, lng: -74.3076, name: 'Old Bridge, NJ' },
+      '07039': { lat: 40.7534, lng: -74.2293, name: 'Livingston, NJ' },
+      '07052': { lat: 40.7951, lng: -74.2393, name: 'West Orange, NJ' },
+      '07003': { lat: 40.8376, lng: -74.1593, name: 'Bloomfield, NJ' },
+      '07110': { lat: 40.7401, lng: -74.1976, name: 'Nutley, NJ' },
+      '08619': { lat: 40.2176, lng: -74.7643, name: 'Trenton, NJ' },
+      '08648': { lat: 40.2901, lng: -74.6893, name: 'Lawrence Township, NJ' },
+      '08540': { lat: 40.3626, lng: -74.6593, name: 'Princeton, NJ' },
+      '08753': { lat: 40.0784, lng: -74.1793, name: 'Toms River, NJ' },
+      '07762': { lat: 40.3609, lng: -74.0626, name: 'Spring Lake, NJ' },
+      '07760': { lat: 40.2434, lng: -74.0126, name: 'Rumson, NJ' },
+      '08724': { lat: 40.0584, lng: -74.1176, name: 'Brick, NJ' },
+      
+      // Maryland
+      '21208': { lat: 39.3751, lng: -76.6993, name: 'Pikesville, MD' },
+      '21209': { lat: 39.3834, lng: -76.7293, name: 'Mount Washington, MD' },
+      '21215': { lat: 39.3401, lng: -76.6676, name: 'Baltimore, MD' },
+      '21117': { lat: 39.4434, lng: -76.8293, name: 'Owings Mills, MD' },
+      '20852': { lat: 39.0601, lng: -77.1126, name: 'Rockville, MD' },
+      '20906': { lat: 39.0901, lng: -77.0593, name: 'Silver Spring, MD' },
+      '20910': { lat: 39.0126, lng: -77.0426, name: 'Silver Spring, MD' },
+      '20815': { lat: 38.9834, lng: -77.0976, name: 'Chevy Chase, MD' },
+      '20817': { lat: 38.9776, lng: -77.1293, name: 'Bethesda, MD' },
+      '20814': { lat: 39.0001, lng: -77.0976, name: 'Bethesda, MD' },
+      
+      // Pennsylvania
+      '19096': { lat: 40.0001, lng: -75.2676, name: 'Wynnewood, PA' },
+      '19004': { lat: 40.0101, lng: -75.2826, name: 'Bala Cynwyd, PA' },
+      '19010': { lat: 39.9626, lng: -75.2893, name: 'Bryn Mawr, PA' },
+      '19151': { lat: 39.9776, lng: -75.2676, name: 'Philadelphia, PA' },
+      '19131': { lat: 39.9926, lng: -75.2193, name: 'Philadelphia, PA' },
+      '19103': { lat: 39.9526, lng: -75.1652, name: 'Philadelphia, PA' },
+      '15217': { lat: 40.4326, lng: -79.9226, name: 'Squirrel Hill, Pittsburgh, PA' },
+      '15232': { lat: 40.4526, lng: -79.9326, name: 'Shadyside, Pittsburgh, PA' },
+      '15213': { lat: 40.4401, lng: -79.9593, name: 'Oakland, Pittsburgh, PA' },
+      
+      // Ohio
+      '44118': { lat: 41.5026, lng: -81.5976, name: 'Cleveland Heights, OH' },
+      '44122': { lat: 41.4676, lng: -81.5293, name: 'Beachwood, OH' },
+      '44124': { lat: 41.4834, lng: -81.4493, name: 'Lyndhurst, OH' },
+      '44143': { lat: 41.4976, lng: -81.3776, name: 'Richmond Heights, OH' },
+      '44026': { lat: 41.5976, lng: -81.4626, name: 'Chagrin Falls, OH' },
+      '44022': { lat: 41.5376, lng: -81.3843, name: 'Chagrin Falls, OH' },
+      '43081': { lat: 40.1126, lng: -82.9676, name: 'Columbus, OH' },
+      '43085': { lat: 40.0901, lng: -83.0293, name: 'Columbus, OH' },
+      
+      // Illinois
+      '60076': { lat: 42.0784, lng: -87.7593, name: 'Skokie, IL' },
+      '60203': { lat: 42.0451, lng: -87.6976, name: 'Evanston, IL' },
+      '60201': { lat: 42.0501, lng: -87.6826, name: 'Evanston, IL' },
+      '60091': { lat: 42.1376, lng: -87.7543, name: 'Wilmette, IL' },
+      '60093': { lat: 42.1026, lng: -87.7343, name: 'Winnetka, IL' },
+      '60045': { lat: 42.2084, lng: -87.8093, name: 'Lake Forest, IL' },
+      '60025': { lat: 42.1376, lng: -87.8043, name: 'Glenview, IL' },
+      '60062': { lat: 42.1176, lng: -87.8293, name: 'Northbrook, IL' },
+      '60026': { lat: 42.1626, lng: -87.8376, name: 'Deerfield, IL' },
+      '60044': { lat: 42.2226, lng: -87.8443, name: 'Lake Bluff, IL' },
+      '60089': { lat: 42.2376, lng: -87.8376, name: 'Buffalo Grove, IL' },
+      '60614': { lat: 41.9212, lng: -87.6534, name: 'Lincoln Park, Chicago, IL' },
+      '60640': { lat: 41.9701, lng: -87.6693, name: 'Uptown, Chicago, IL' },
+      '60645': { lat: 42.0126, lng: -87.6976, name: 'West Rogers Park, Chicago, IL' },
+      
+      // Florida
+      '33154': { lat: 25.8826, lng: -80.1376, name: 'North Miami Beach, FL' },
+      '33160': { lat: 25.9376, lng: -80.1543, name: 'North Miami Beach, FL' },
+      '33179': { lat: 25.9526, lng: -80.1693, name: 'North Miami Beach, FL' },
+      '33180': { lat: 25.9626, lng: -80.1426, name: 'Aventura, FL' },
+      '33162': { lat: 25.9276, lng: -80.1543, name: 'North Miami Beach, FL' },
+      '33021': { lat: 26.0176, lng: -80.1543, name: 'Hollywood, FL' },
+      '33004': { lat: 26.0926, lng: -80.1426, name: 'Dania Beach, FL' },
+      '33019': { lat: 26.0626, lng: -80.1376, name: 'Hollywood, FL' },
+      '33312': { lat: 26.1276, lng: -80.1793, name: 'Fort Lauderdale, FL' },
+      '33324': { lat: 26.1126, lng: -80.2543, name: 'Plantation, FL' },
+      '33351': { lat: 26.2126, lng: -80.2543, name: 'Tamarac, FL' },
+      '33076': { lat: 26.2876, lng: -80.2376, name: 'Coconut Creek, FL' },
+      '33067': { lat: 26.3126, lng: -80.2276, name: 'Pompano Beach, FL' },
+      '33496': { lat: 26.3876, lng: -80.1176, name: 'Boca Raton, FL' },
+      '33486': { lat: 26.3626, lng: -80.0826, name: 'Boca Raton, FL' },
+      '33433': { lat: 26.4376, lng: -80.0726, name: 'Boca Raton, FL' },
+      '33139': { lat: 25.7825, lng: -80.1348, name: 'Miami Beach, FL' },
+      '33141': { lat: 25.8501, lng: -80.1293, name: 'Miami Beach, FL' },
+      '33140': { lat: 25.8176, lng: -80.1343, name: 'Miami Beach, FL' },
+      '33020': { lat: 26.0376, lng: -80.1426, name: 'Hollywood, FL' },
+      '34787': { lat: 28.3901, lng: -81.4376, name: 'Winter Garden, FL' },
+      
+      // California
+      '90035': { lat: 34.0501, lng: -118.3826, name: 'Los Angeles (Pico-Robertson), CA' },
+      '90034': { lat: 34.0276, lng: -118.4026, name: 'Los Angeles (Beverlywood), CA' },
+      '90036': { lat: 34.0726, lng: -118.3526, name: 'Los Angeles (Miracle Mile), CA' },
       '90210': { lat: 34.0901, lng: -118.4065, name: 'Beverly Hills, CA' },
-      '60614': { lat: 41.9212, lng: -87.6534, name: 'Chicago, IL' },
-      '33139': { lat: 25.7825, lng: -80.1348, name: 'Miami Beach, FL' }
+      '90212': { lat: 34.0651, lng: -118.4026, name: 'Beverly Hills, CA' },
+      '90049': { lat: 34.0676, lng: -118.4593, name: 'Brentwood, CA' },
+      '90025': { lat: 34.0451, lng: -118.4376, name: 'West Los Angeles, CA' },
+      '90024': { lat: 34.0626, lng: -118.4426, name: 'Westwood, CA' },
+      '91423': { lat: 34.1676, lng: -118.5593, name: 'Sherman Oaks, CA' },
+      '91436': { lat: 34.1626, lng: -118.4826, name: 'Encino, CA' },
+      '90077': { lat: 34.0851, lng: -118.4693, name: 'Bel Air, CA' },
+      '91602': { lat: 34.1651, lng: -118.4093, name: 'North Hollywood, CA' },
+      '92037': { lat: 32.8376, lng: -117.2593, name: 'La Jolla, CA' },
+      '92122': { lat: 32.8626, lng: -117.2076, name: 'University City, San Diego, CA' },
+      '92130': { lat: 32.9526, lng: -117.1876, name: 'Carmel Valley, San Diego, CA' },
+      '94306': { lat: 37.4301, lng: -122.1593, name: 'Palo Alto, CA' },
+      '94301': { lat: 37.4426, lng: -122.1593, name: 'Palo Alto, CA' },
+      '94022': { lat: 37.3626, lng: -122.0826, name: 'Los Altos, CA' },
+      '94024': { lat: 37.3751, lng: -122.0976, name: 'Los Altos, CA' },
+      '94040': { lat: 37.3876, lng: -122.0826, name: 'Mountain View, CA' },
+      '94085': { lat: 37.3926, lng: -122.0326, name: 'Sunnyvale, CA' },
+      
+      // Arizona
+      '85251': { lat: 33.4976, lng: -111.9276, name: 'Scottsdale, AZ' },
+      '85254': { lat: 33.6176, lng: -111.9093, name: 'Scottsdale, AZ' },
+      '85016': { lat: 33.5076, lng: -112.0526, name: 'Phoenix, AZ' },
+      '85018': { lat: 33.4976, lng: -111.9976, name: 'Phoenix, AZ' },
+      
+      // Colorado
+      '80220': { lat: 39.7276, lng: -104.9076, name: 'Denver, CO' },
+      '80231': { lat: 39.6501, lng: -104.9176, name: 'Denver, CO' },
+      '80237': { lat: 39.6276, lng: -104.8976, name: 'Denver, CO' },
+      
+      // Texas
+      '77096': { lat: 29.7001, lng: -95.5376, name: 'Houston, TX' },
+      '77025': { lat: 29.7076, lng: -95.4343, name: 'Houston, TX' },
+      '77005': { lat: 29.7176, lng: -95.4193, name: 'Houston, TX' },
+      '75023': { lat: 33.0176, lng: -96.6976, name: 'Plano, TX' },
+      '75093': { lat: 33.0326, lng: -96.7593, name: 'Plano, TX' },
+      '75252': { lat: 32.9976, lng: -96.7893, name: 'Dallas, TX' },
+      
+      // Washington
+      '98004': { lat: 47.6176, lng: -122.2093, name: 'Bellevue, WA' },
+      '98005': { lat: 47.6126, lng: -122.1726, name: 'Bellevue, WA' },
+      '98033': { lat: 47.6826, lng: -122.2093, name: 'Kirkland, WA' },
+      '98109': { lat: 47.6376, lng: -122.3426, name: 'Seattle, WA' },
+      '98112': { lat: 47.6301, lng: -122.3026, name: 'Seattle, WA' },
+      
+      // Georgia
+      '30342': { lat: 33.9276, lng: -84.3326, name: 'Atlanta, GA' },
+      '30327': { lat: 33.8501, lng: -84.3793, name: 'Atlanta, GA' },
+      
+      // Missouri
+      '63124': { lat: 38.6626, lng: -90.3443, name: 'Ladue, MO' },
+      '63105': { lat: 38.6476, lng: -90.3343, name: 'Clayton, MO' },
+      '63132': { lat: 38.6626, lng: -90.3643, name: 'Creve Coeur, MO' },
+      
+      // Tennessee
+      '37215': { lat: 36.1076, lng: -86.8076, name: 'Nashville, TN' },
+      '38117': { lat: 35.1326, lng: -89.9076, name: 'Memphis, TN' },
+      
+      // Michigan
+      '48076': { lat: 42.5051, lng: -83.2176, name: 'Southfield, MI' },
+      '48237': { lat: 42.4826, lng: -83.2643, name: 'Oak Park, MI' },
+      '48075': { lat: 42.5176, lng: -83.2043, name: 'Southfield, MI' },
+      
+      // Nevada
+      '89134': { lat: 36.1826, lng: -115.3093, name: 'Las Vegas, NV' },
+      '89149': { lat: 36.2626, lng: -115.2676, name: 'Las Vegas, NV' },
+      '89148': { lat: 36.0976, lng: -115.2943, name: 'Las Vegas, NV' },
+      
+      // Connecticut
+      '06877': { lat: 41.1926, lng: -73.3743, name: 'Ridgefield, CT' },
+      '06820': { lat: 41.1326, lng: -73.3593, name: 'Darien, CT' },
+      '06902': { lat: 41.0626, lng: -73.5293, name: 'Stamford, CT' },
+      '06830': { lat: 41.0276, lng: -73.6243, name: 'Greenwich, CT' },
+      '06807': { lat: 41.0176, lng: -73.5593, name: 'Cos Cob, CT' },
+      '06611': { lat: 41.2126, lng: -73.0893, name: 'Trumbull, CT' },
+      '06514': { lat: 41.3076, lng: -72.9593, name: 'Hamden, CT' },
+      '06477': { lat: 41.3376, lng: -72.8743, name: 'Orange, CT' },
+      '06437': { lat: 41.2976, lng: -72.6393, name: 'Guilford, CT' },
+      '06883': { lat: 41.2076, lng: -73.3493, name: 'Weston, CT' },
+      
+      // Virginia
+      '22101': { lat: 38.8926, lng: -77.2593, name: 'McLean, VA' },
+      '22043': { lat: 38.8826, lng: -77.1943, name: 'Falls Church, VA' },
+      '22152': { lat: 38.7626, lng: -77.1793, name: 'Springfield, VA' },
+      '23226': { lat: 37.5826, lng: -77.5143, name: 'Richmond, VA' },
+      
+      // Rhode Island
+      '02906': { lat: 41.8376, lng: -71.4026, name: 'Providence, RI' },
+      
+      // Delaware
+      '19711': { lat: 39.7626, lng: -75.6443, name: 'Newark, DE' }
     };
-    return locations[zip] || { lat: 42.1237, lng: -71.1787, name: 'Sharon, MA' };
+    
+    if (!locations[zip]) {
+      return { 
+        lat: 42.1237, 
+        lng: -71.1787, 
+        name: `ZIP ${zip} (not in database - using Sharon, MA. Enter coordinates below for accurate times)` 
+      };
+    }
+    
+    return locations[zip];
   };
 
   // Torah portions in order
@@ -726,8 +1052,12 @@ const ShabbatCalendarBlocker = () => {
     
     try {
       const allEvents = [];
-      const location = getLocationFromZip(zipCode);
-      const { lat, lng } = location;
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      
+      if (isNaN(lat) || isNaN(lng)) {
+        throw new Error('Invalid latitude or longitude. Please enter valid coordinates.');
+      }
 
       for (let year = startYear; year <= endYear; year++) {
         const yearHolidays = jewishHolidayData[year] || [];
@@ -1214,12 +1544,48 @@ const ShabbatCalendarBlocker = () => {
               <input
                 type="text"
                 value={zipCode}
-                onChange={(e) => setZipCode(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                onChange={(e) => {
+                  const newZip = e.target.value;
+                  setZipCode(newZip);
+                  
+                  // Check hardcoded list first for instant lookup
+                  const loc = getLocationFromZip(newZip);
+                  if (loc.name !== `ZIP ${newZip} (using Sharon, MA coordinates - please enter lat/long below for accurate times)`) {
+                    setLatitude(loc.lat.toString());
+                    setLongitude(loc.lng.toString());
+                    setLocationName(loc.name);
+                  } else if (newZip.length === 5) {
+                    // Use API for other ZIP codes
+                    lookupZipCode(newZip);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3"
                 placeholder="02067"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {getLocationFromZip(zipCode).name}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">Latitude</label>
+                  <input
+                    type="text"
+                    value={latitude}
+                    onChange={(e) => setLatitude(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="42.1237"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">Longitude</label>
+                  <input
+                    type="text"
+                    value={longitude}
+                    onChange={(e) => setLongitude(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="-71.1787"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {lookingUpZip ? 'Looking up ZIP code...' : `Location: ${locationName}`}
               </p>
             </div>
 
@@ -1339,7 +1705,7 @@ const ShabbatCalendarBlocker = () => {
           {events.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                {events.length} events for {getLocationFromZip(zipCode).name}
+                {events.length} events generated
               </h2>
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
