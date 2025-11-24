@@ -9,6 +9,8 @@ const ShabbatCalendarBlocker = () => {
   
   // Form state
   const [zipCode, setZipCode] = useState('02067');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [city, setCity] = useState('');
   const [locationName, setLocationName] = useState('Sharon, MA');
   const [lookingUpLocation, setLookingUpLocation] = useState(false);
@@ -47,6 +49,11 @@ const ShabbatCalendarBlocker = () => {
         const data = await response.json();
         if (data.location) {
           setLocationName(`${data.location.title}`);
+          // Auto-populate coordinates
+          if (data.location.latitude && data.location.longitude) {
+            setLatitude(data.location.latitude.toString());
+            setLongitude(data.location.longitude.toString());
+          }
         } else {
           setError('Location not found. Please try a different ZIP code or city name.');
         }
@@ -62,8 +69,8 @@ const ShabbatCalendarBlocker = () => {
   };
 
   const generateEvents = async () => {
-    if (!zipCode && !city) {
-      setError('Please enter a ZIP code or city name');
+    if (!zipCode && !latitude && !longitude) {
+      setError('Please enter a ZIP code or coordinates');
       return;
     }
 
@@ -72,7 +79,6 @@ const ShabbatCalendarBlocker = () => {
     
     try {
       const allEvents = [];
-      const query = zipCode || city;
       
       // Fetch data for each year
       for (let year = startYear; year <= endYear; year++) {
@@ -91,10 +97,18 @@ const ShabbatCalendarBlocker = () => {
           c: 'on',         // Candle lighting
           M: 'on',         // Havdalah
           o: 'on',         // Omer count
-          geo: 'zip',
-          zip: query,
           lg: 's'          // Sephardic transliteration
         });
+        
+        // Use coordinates if provided, otherwise use ZIP
+        if (latitude && longitude) {
+          params.set('geo', 'pos');
+          params.set('latitude', latitude);
+          params.set('longitude', longitude);
+        } else {
+          params.set('geo', 'zip');
+          params.set('zip', zipCode);
+        }
         
         const url = `https://www.hebcal.com/hebcal?${params.toString()}`;
         
@@ -398,7 +412,7 @@ const ShabbatCalendarBlocker = () => {
             <Calendar className="w-8 h-8 text-indigo-600" />
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-800">Jewish Calendar Blocker</h1>
-              <p className="text-sm text-gray-600 mt-1">Powered by Hebcal API - Always accurate, always up-to-date</p>
+              <p className="text-sm text-gray-600 mt-1">Powered by Hebcal API</p>
             </div>
             <a 
               href="https://buymeacoffee.com/danw" 
@@ -416,13 +430,16 @@ const ShabbatCalendarBlocker = () => {
               <div className="text-sm text-blue-800">
                 <p className="font-semibold mb-2">What this tool does:</p>
                 <ul className="list-disc ml-4 space-y-1">
-                  <li>Uses the official Hebcal API for 100% accurate dates and times</li>
-                  <li>Automatically calculates candle lighting and Havdalah times for your exact location</li>
+                  <li>Uses the official Hebcal API for Jewish calendar dates and times</li>
+                  <li>Automatically calculates candle lighting and Havdalah times for your location</li>
                   <li>Blocks your calendar from before candle lighting until 11:59 PM each Friday (shows as "Busy")</li>
                   <li>Marks major holidays as "Out of Office"</li>
                   <li>Adds labels for Torah portions, Rosh Chodesh, fast days, Sefirat HaOmer, and more</li>
                   <li>Works for any year - past, present, or future!</li>
                 </ul>
+                <p className="mt-3 text-xs text-yellow-800 bg-yellow-100 p-2 rounded">
+                  ⚠️ <strong>Important:</strong> While this tool uses authoritative sources (Hebcal.com), you should always verify zmanim (halachic times) and Jewish calendar dates before relying on them for observance.
+                </p>
                 <button
                   onClick={() => setShowInstructions(!showInstructions)}
                   className="mt-3 text-blue-700 underline hover:text-blue-900 font-medium"
@@ -482,32 +499,58 @@ const ShabbatCalendarBlocker = () => {
                 <MapPin className="w-5 h-5 text-indigo-600" />
                 <h2 className="font-semibold text-gray-800">Location</h2>
               </div>
-              <label className="block text-sm text-gray-700 mb-2">US ZIP Code or City Name</label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={zipCode}
-                  onChange={(e) => {
-                    setZipCode(e.target.value);
-                    setCity('');
-                  }}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="02067 or Boston"
-                />
-                <button
-                  onClick={lookupLocation}
-                  disabled={lookingUpLocation}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
-                >
-                  {lookingUpLocation ? '...' : 'Lookup'}
-                </button>
+              
+              <div className="mb-4">
+                <label className="block text-sm text-gray-700 mb-2">US ZIP Code</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={zipCode}
+                    onChange={(e) => setZipCode(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="02067"
+                  />
+                  <button
+                    onClick={lookupLocation}
+                    disabled={lookingUpLocation || !zipCode}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
+                  >
+                    {lookingUpLocation ? '...' : 'Lookup'}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {lookingUpLocation ? 'Looking up location...' : locationName ? `Location: ${locationName}` : 'Enter ZIP and click Lookup'}
+                </p>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                {lookingUpLocation ? 'Looking up location...' : `Location: ${locationName}`}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Times calculated automatically by Hebcal for your exact location
-              </p>
+
+              <div className="pt-4 border-t border-gray-300">
+                <p className="text-xs text-gray-600 mb-2 font-semibold">OR enter coordinates manually:</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Latitude</label>
+                    <input
+                      type="text"
+                      value={latitude}
+                      onChange={(e) => setLatitude(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="42.1237"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Longitude</label>
+                    <input
+                      type="text"
+                      value={longitude}
+                      onChange={(e) => setLongitude(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="-71.1787"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Coordinates auto-populate when you look up a ZIP code
+                </p>
+              </div>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4">
@@ -563,6 +606,7 @@ const ShabbatCalendarBlocker = () => {
               <CalendarCheck className="w-5 h-5 text-indigo-600" />
               <h2 className="font-semibold text-gray-800">Optional Out of Office Days</h2>
             </div>
+            <p className="text-sm text-gray-600 mb-3">Check any of the following additional days that you'd like to mark as "Out of Office" in your calendar. Unchecked days will be added as labels only. (Major Holidays with Issur Melacha are always marked as "Out of Office")</p>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
               {[
                 ['erevRoshHashana', 'Erev Rosh Hashana'],
