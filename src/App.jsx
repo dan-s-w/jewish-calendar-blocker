@@ -163,7 +163,16 @@ const ShabbatCalendarBlocker = () => {
         
         // Process each event
         data.items.forEach(item => {
-          const date = new Date(item.date);
+          // Parse date correctly for all-day events (without timezone conversion)
+          let date;
+          if (item.date.includes('T')) {
+            // Has time - parse normally
+            date = new Date(item.date);
+          } else {
+            // All-day event - parse as local date to avoid timezone shift
+            const [year, month, day] = item.date.split('-').map(Number);
+            date = new Date(year, month - 1, day);
+          }
           
           // Handle candle lighting
           if (item.category === 'candles') {
