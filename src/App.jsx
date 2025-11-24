@@ -30,6 +30,39 @@ const ShabbatCalendarBlocker = () => {
     tishaBAv: false
   });
 
+  // Auto-lookup location when ZIP code changes
+  React.useEffect(() => {
+    const lookupZip = async () => {
+      // Only lookup if we have a 5-digit ZIP code
+      if (zipCode && zipCode.length === 5 && /^\d{5}$/.test(zipCode)) {
+        setLookingUpLocation(true);
+        try {
+          const response = await fetch(`https://www.hebcal.com/shabbat?cfg=json&geo=zip&zip=${encodeURIComponent(zipCode)}&M=on`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.location) {
+              setLocationName(`${data.location.title}`);
+              // Auto-populate coordinates
+              if (data.location.latitude && data.location.longitude) {
+                setLatitude(data.location.latitude.toString());
+                setLongitude(data.location.longitude.toString());
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Auto-lookup error:', err);
+        } finally {
+          setLookingUpLocation(false);
+        }
+      }
+    };
+
+    // Debounce the lookup to avoid too many API calls
+    const timeoutId = setTimeout(lookupZip, 500);
+    return () => clearTimeout(timeoutId);
+  }, [zipCode]);
+
   // Lookup location by ZIP code or city name
   const lookupLocation = async () => {
     if (!zipCode && !city) {
@@ -502,24 +535,16 @@ const ShabbatCalendarBlocker = () => {
               
               <div className="mb-4">
                 <label className="block text-sm text-gray-700 mb-2">US ZIP Code</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={zipCode}
-                    onChange={(e) => setZipCode(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-                    placeholder="02067"
-                  />
-                  <button
-                    onClick={lookupLocation}
-                    disabled={lookingUpLocation || !zipCode}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
-                  >
-                    {lookingUpLocation ? '...' : 'Lookup'}
-                  </button>
-                </div>
+                <input
+                  type="text"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="02067"
+                  maxLength="5"
+                />
                 <p className="text-xs text-gray-500 mt-1">
-                  {lookingUpLocation ? 'Looking up location...' : locationName ? `Location: ${locationName}` : 'Enter ZIP and click Lookup'}
+                  {lookingUpLocation ? 'Looking up location...' : locationName ? `Location: ${locationName}` : 'Enter 5-digit ZIP code'}
                 </p>
               </div>
 
