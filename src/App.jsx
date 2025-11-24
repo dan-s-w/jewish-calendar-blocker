@@ -54,13 +54,13 @@ const ShabbatCalendarBlocker = () => {
       [12, 27, 'Chanukah 2', 'chanukah'],
       [12, 28, 'Chanukah 3', 'chanukah'],
       [12, 29, 'Chanukah 4', 'chanukah'],
-      [12, 30, 'Rosh Chodesh Tevet', 'roshchodesh'],  // ← ADDED
       [12, 30, 'Chanukah 5', 'chanukah'],
       [12, 31, 'Rosh Chodesh Tevet', 'roshchodesh'],  // ← ADDED
       [12, 31, 'Chanukah 6', 'chanukah']
     ],
     2025: [
       [1, 1, 'Chanukah 7', 'chanukah'],
+      [1, 1, 'Rosh Chodesh Tevet', 'roshchodesh'],  // ← ADDED
       [1, 2, 'Chanukah 8', 'chanukah'],
       [1, 10, 'Asara B\'Tevet', 'fast'],  // ← CHANGED from [1, 13, ...]
       [1, 30, 'Rosh Chodesh Shvat', 'roshchodesh'],
